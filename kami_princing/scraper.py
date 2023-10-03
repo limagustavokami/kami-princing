@@ -5,6 +5,7 @@ from typing import List
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
+from kami_logging import benchmark_with, logging_with
 
 from kami_princing.constant import (
     COLUMNS_ALL_SELLER,
@@ -13,7 +14,6 @@ from kami_princing.constant import (
     COLUMNS_HAIRPRO,
     COLUMNS_RESULT,
 )
-from kami_logging import benchmark_with, logging_with
 
 princing_logger = logging.getLogger('Pricing')
 

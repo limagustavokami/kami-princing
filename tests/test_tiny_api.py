@@ -1,8 +1,6 @@
 import unittest
 from unittest.mock import MagicMock, patch
-
 from requests.exceptions import HTTPError, RequestException
-
 from kami_princing.tiny_api import TinyAPI
 
 
