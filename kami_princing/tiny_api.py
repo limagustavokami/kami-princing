@@ -31,7 +31,7 @@ class TinyAPI:
     @benchmark_with(tiny_api_logger)
     @logging_with(tiny_api_logger)
     def get_product_by_sku(self, sku: str) -> dict:
-        if self.token is None:
+        if not self.token:
             self._set_token()
         endpoint_url = f'{self.base_url}produtos.pesquisa.php'
         data = {'token': self.token, 'pesquisa': sku, 'formato': 'JSON'}
