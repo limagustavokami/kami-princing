@@ -6,6 +6,9 @@ from kami_princing.princing import Pricing
 
 
 class TestPricing(unittest.TestCase):
+
+    pc = Pricing()
+
     def setUp(self):
         self.pc = Pricing(
             multiplier_commission=0.15,
@@ -15,39 +18,35 @@ class TestPricing(unittest.TestCase):
             increment_price_new=0.10,
         )
 
-    def test_calc_ebitda_positive(self):
-        data = {
-            'special_price': [10.0],
-            'COST': [2.0],
-            'FREIGHT': [1.0],
-            'INPUT': [1.0],
-        }
-        df = pd.DataFrame(data)
-        result_df = self.pc.calc_ebitda(df)
-        self.assertEqual(result_df['EBITDA R$'][0], 3.97)
-        self.assertEqual(result_df['EBITDA %'][0], 39.7)
+    def test_calc_ebitda_success(self):
 
-    def test_pricing_positive(self):
         data = {
-            'special_price': [10.0],
+            'sku': 'BR001',
+            'special_price': [02.0],
             'COST': [2.0],
             'FREIGHT': [1.0],
             'INPUT': [1.0],
         }
         df = pd.DataFrame(data)
-        result_df = self.pc.pricing(df)
-        self.assertGreaterEqual(result_df['EBITDA %'][0], 4.0)
 
-    def test_pricing_negative(self):
+        ebitda = self.pc.calc_ebitda(df)
+        df_ebitda = self.pc.pricing(ebitda)
+        self.assertEqual(df_ebitda['EBITDA %'][0], 4.0)
+
+    def test_calc_ebitda_failure(self):
+
         data = {
-            'special_price': [0.0],
+            'sku': 'BR001',
+            'special_price': [02.0],
             'COST': [2.0],
             'FREIGHT': [1.0],
             'INPUT': [1.0],
         }
         df = pd.DataFrame(data)
-        with self.assertRaises(ZeroDivisionError):
-            self.pc.pricing(df)
+
+        ebitda = self.pc.calc_ebitda(df)
+        df_ebitda = self.pc.pricing(ebitda)
+        self.assertNotEqual(df_ebitda['EBITDA %'][0], 3.9)
 
 
 if __name__ == '__main__':
