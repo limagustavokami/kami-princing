@@ -3,6 +3,7 @@ from os import getenv
 from typing import List
 
 from kami_logging import benchmark_with, logging_with
+from requests.exceptions import HTTPError, RequestException
 
 tiny_api_logger = logging.getLogger('Tiny API')
 
@@ -10,6 +11,10 @@ import requests
 from dotenv import load_dotenv
 
 load_dotenv()
+
+
+class TinyAPIError(Exception):
+    pass
 
 
 class TinyAPI:
@@ -31,34 +36,37 @@ class TinyAPI:
     @benchmark_with(tiny_api_logger)
     @logging_with(tiny_api_logger)
     def get_product_by_sku(self, sku: str) -> dict:
+        product_dict = {}
         if not self.token:
             self._set_token()
         endpoint_url = f'{self.base_url}produtos.pesquisa.php'
         data = {'token': self.token, 'pesquisa': sku, 'formato': 'JSON'}
-        tiny_api_logger.info(f'{endpoint_url} - {data}')
+        tiny_api_logger.info(f'{endpoint_url}')
         try:
             res = requests.post(endpoint_url, data=data)
             res.raise_for_status()
             response = res.json()
-            if (
+            if 'retorno' in response and response['retorno']['status'] == 'OK':
+                product_dict = response['retorno']['produtos'][0]['produto']
+                return product_dict
+            elif (
                 'retorno' in response
                 and response['retorno']['status'] == 'Erro'
             ):
-                raise Exception(
-                    f"HTTP error occurred: {response['retorno']['erros']}"
+                raise TinyAPIError(
+                    f"Tiny API Raises: { response['retorno']['erros']}"
                 )
-            return response
-        except requests.exceptions.HTTPError as err:
-            raise Exception(f'HTTP error occurred: {err}') from err
-        except requests.exceptions.RequestException as err:
-            raise Exception(f'An error occurred: {err}') from err
-        except Exception as err:
-            raise Exception(f'An unknown error occurred: {err}') from err
+        except HTTPError as err:
+            raise HTTPError(f'HTTP error occurred: {err}') from err
+        except RequestException as err:
+            raise RequestException(
+                f'An request error occurred: {err}'
+            ) from err
 
     @benchmark_with(tiny_api_logger)
     @logging_with(tiny_api_logger)
-    def get_products_list_by_sku(self, sku_list) -> List[str]:
-        products_list = List[str]
+    def get_products_list_by_sku(self, sku_list: List[str]) -> List[dict]:
+        products_list = []
         try:
             for sku in sku_list:
                 product_dict = {}

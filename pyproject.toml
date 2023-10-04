@@ -56,6 +56,6 @@ line_length = 79
 lint-review = "blue --check --diff . && isort --check --diff ."
 lint-fix = "blue . && isort ."
 pre_test = "task lint-review"
-test = "pytest -s -x --cov=kami_messenger -vv -rs"
+test = "pytest -s -x --cov=kami_princing -vv -rs"
 post_test = "coverage html"
 docs = "mkdocs serve"
