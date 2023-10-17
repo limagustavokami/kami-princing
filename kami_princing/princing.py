@@ -9,15 +9,15 @@ dataframe_logger = logging.getLogger('dataframe')
 class Pricing:
     def __init__(
         self,
-        multiplier_commission: float = 0.0,
-        multiplier_admin: float = 0.0,
-        multiplier_reverse: float = 0.0,
-        limit_rate_ebitda: float = 0.0,
-        increment_price_new: float = 0.0,
+        multiplier_COMISSÃO: float = 0.15,
+        multiplier_admin: float = 0.05,
+        multiplier_REVERSA: float = 0.003,
+        limit_rate_ebitda: float = 4.0,
+        increment_price_new: float = 0.10,
     ):
-        self.multiplier_commission = multiplier_commission
+        self.multiplier_COMISSÃO = multiplier_COMISSÃO
         self.multiplier_admin = multiplier_admin
-        self.multiplier_reverse = multiplier_reverse
+        self.multiplier_REVERSA = multiplier_REVERSA
         self.limit_rate_ebitda = limit_rate_ebitda
         self.increment_price_new = increment_price_new
 
@@ -25,21 +25,21 @@ class Pricing:
     @logging_with(dataframe_logger)
     def calc_ebitda(self, df: pd.DataFrame) -> pd.DataFrame:
         try:
-            df['COMMISSION'] = round(
-                df['special_price'] * self.multiplier_commission, 2
+            df['COMISSÃO'] = round(
+                df['special_price'] * self.multiplier_COMISSÃO, 2
             )
             df['ADMIN'] = round(df['special_price'] * self.multiplier_admin, 2)
-            df['REVERSE'] = round(
-                df['special_price'] * self.multiplier_reverse, 2
+            df['REVERSA'] = round(
+                df['special_price'] * self.multiplier_REVERSA, 2
             )
             df['EBITDA R$'] = (
                 df['special_price']
-                - df['COST']
-                - df['FREIGHT']
-                - df['INPUT']
-                - df['COMMISSION']
+                - df['CUSTO']
+                - df['FRETE']
+                - df['INSUMO']
+                - df['COMISSÃO']
                 - df['ADMIN']
-                - df['REVERSE']
+                - df['REVERSA']
             )
             df['EBITDA %'] = (
                 round(df['EBITDA R$'] / df['special_price'], 3) * 100
@@ -66,27 +66,27 @@ class Pricing:
             for idx in range(0, len(df['special_price'])):
                 while df.loc[idx, 'EBITDA %'] < self.limit_rate_ebitda:
                     df.loc[idx, 'special_price'] += self.increment_price_new
-                    df.loc[idx, 'COMMISSION'] = round(
+                    df.loc[idx, 'COMISSÃO'] = round(
                         df.loc[idx, 'special_price']
-                        * self.multiplier_commission,
+                        * self.multiplier_COMISSÃO,
                         2,
                     )
                     df.loc[idx, 'ADMIN'] = round(
                         df.loc[idx, 'special_price'] * self.multiplier_admin,
                         2,
                     )
-                    df.loc[idx, 'REVERSE'] = round(
-                        df.loc[idx, 'special_price'] * self.multiplier_reverse,
+                    df.loc[idx, 'REVERSA'] = round(
+                        df.loc[idx, 'special_price'] * self.multiplier_REVERSA,
                         2,
                     )
                     df.loc[idx, 'EBITDA R$'] = (
                         df.loc[idx, 'special_price']
-                        - df.loc[idx, 'COST']
-                        - df.loc[idx, 'COMMISSION']
-                        - df.loc[idx, 'FREIGHT']
+                        - df.loc[idx, 'CUSTO']
+                        - df.loc[idx, 'COMISSÃO']
+                        - df.loc[idx, 'FRETE']
                         - df.loc[idx, 'ADMIN']
-                        - df.loc[idx, 'INPUT']
-                        - df.loc[idx, 'REVERSE']
+                        - df.loc[idx, 'INSUMO']
+                        - df.loc[idx, 'REVERSA']
                     )
                     df.loc[idx, 'EBITDA %'] = (
                         round(
@@ -98,7 +98,7 @@ class Pricing:
                     )
                 else:
                     dataframe_logger.info(
-                        f"The sku {df.loc[idx, 'sku']} with a price of {df.loc[idx, 'special_price']} has an ebitda of {df.loc[idx, 'EBITDA %']}"
+                        f"The sku {df.loc[idx, 'sku (*)']} with a price of {df.loc[idx, 'special_price']} has an ebitda of {df.loc[idx, 'EBITDA %']}"
                     )
             return df
         except Exception as e:

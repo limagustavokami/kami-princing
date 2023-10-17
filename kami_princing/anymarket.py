@@ -11,6 +11,20 @@ class Anymarket:
         self.credentials_path = credentials_path
         self.base_url = base_url
 
+    def create_anymarket_products(self, df:pd.DataFrame):
+        products_list = []
+
+        for product in df['content']:
+            products_list.append(product['skus'][0])
+        
+        df = pd.DataFrame(products_list)
+
+        df.rename(columns={'partnerId':'sku (*)'}, inplace=True)
+
+        df = df[['sku (*)','id','title','ean','price','amount','additionalTime','stockLocalId']]
+
+        return df
+
     def connect(self) -> json:
         try:
             with open(self.credentials_path, 'r') as file:
@@ -27,7 +41,10 @@ class Anymarket:
                 res = conn.getresponse()
                 data = res.read()
                 json_data = json.loads(data.decode("utf-8"))
-                return json_data
+
+                df = self.create_anymarket_products(json_data)
+
+                return df
         except Exception as e:
             raise Exception(f'Failed to connect: {e}')
 
@@ -39,13 +56,17 @@ class Anymarket:
         
         df = pd.DataFrame(products_list)
 
+        df.rename(columns={'partnerId':'sku (*)'}, inplace=True)
+
+        df = df[['sku (*)','id','title','ean','price','amount','additionalTime','stockLocalId']]
+
         return df
 
 
 if __name__ == "__main__":
     am = Anymarket('../credentials/k_service_account_credentials.json')
     teste = am.connect()
-    df = am.create_anymarket_products(teste)
 
-    print(df)
+
+    print(teste)
 

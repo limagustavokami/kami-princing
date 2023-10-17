@@ -16,6 +16,7 @@ from constant import (
 from kami_gsuite.kami_gsheet import KamiGsheet
 from kami_logging import benchmark_with, logging_with
 from princing import Pricing
+from anymarket import Anymarket
 
 princing_logger = logging.getLogger('Pricing')
 
@@ -225,9 +226,6 @@ class Scraper:
 
         df_inactives = df_active.loc[df_active['status'] == 'INATIVO']
 
-        print(df_inactives)
-        print(df)
-
         try:
             to_drop_pricing = []
             for sku in df_inactives['sku']:    
@@ -240,7 +238,6 @@ class Scraper:
             return None
         
 
-        
 if __name__ == '__main__':
     kg = KamiGsheet(
         api_version='v4',
@@ -249,6 +246,7 @@ if __name__ == '__main__':
 
     sc = Scraper(marketplace='belezanaweb')
     pc = Pricing()
+    am = Anymarket('../credentials/k_service_account_credentials.json')
 
     urls_sheets_skus = get_urls_from_gsheet(
         '1u7dCTQzbqgKSSjpSVtsUl7ea2j2YgW4Ko2nB9akE1ws'
@@ -258,12 +256,14 @@ if __name__ == '__main__':
 
     df_pricing = sc.create_dataframes(sellers_df_list, urls_sheets_skus[1])
 
+    df_pricing = sc.drop_inactives(df_pricing)
+
     func_ebitda = sc.ebitda_proccess(df_pricing)
     
     df_ebitda = pc.pricing(func_ebitda)
 
     df_final = sc.drop_inactives(df_ebitda)
 
-    df_final.to_excel("pricing.xlsx")
+    df_anymarket = am.connect()
 
-    print(df_final)
+    df_final_anymarket = df_final.merge(df_anymarket, how='left')
