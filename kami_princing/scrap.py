@@ -30,7 +30,7 @@ def get_urls_from_gsheet(sheet_id):
 
         urls = gsheet.convert_range_to_dataframe(
             sheet_id=sheet_id,
-            sheet_range='pricing!A1:A',
+            sheet_range='pricing_teste!A1:A',
         )
         urls = list(urls['urls'])
 
@@ -264,6 +264,22 @@ if __name__ == '__main__':
 
     df_final = sc.drop_inactives(df_ebitda)
 
-    df_anymarket = am.connect()
+    print(df_final)
 
-    df_final_anymarket = df_final.merge(df_anymarket, how='left')
+    #----------anymarket--------------#
+
+    quantity = am.get_products_quantity()
+
+    all_products = am.get_all_products(quantity)
+
+
+    change = am.change_data_patch(all_products[1])
+
+    query = am.query_all_products(all_products[0])
+
+    df_pricing_anymarket = query.merge(df_final, how='left')
+
+    change_price = am.change_price("ECOMMERCE", df_pricing_anymarket)
+
+    df_pricing_anymarket.to_excel('df_pricing_anymarket.xlsx')
+
