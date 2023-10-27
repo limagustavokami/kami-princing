@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "kami-princing"
+name = "kami-pricing"
 version = "0.1.0"
 description = ""
 authors = ["Maicon de Menezes <maicondmenezes@gmail.com>", "Gustavo Lima <gustavasd@gmail.com>"]
@@ -55,7 +55,7 @@ line_length = 79
 [tool.taskipy.tasks]
 lint-review = "blue --check --diff . && isort --check --diff ."
 lint-fix = "blue . && isort ."
-pre_test = "task lint-review"
-test = "pytest -s -x --cov=kami_princing -vv -rs"
+pre_test = "task lint-fix"
+test = "pytest -s -x --cov=kami_pricing -vv -rs"
 post_test = "coverage html"
 docs = "mkdocs serve"

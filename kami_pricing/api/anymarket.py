@@ -1,0 +1,302 @@
+import json
+import logging
+from os import path
+from typing import Dict, List
+
+import httpx
+import pandas as pd
+from kami_logging import benchmark_with, logging_with
+
+from kami_pricing.constant import ROOT_DIR
+
+anymarket_api_logger = logging.getLogger('Anymarket API')
+base_url = 'https://sandbox-api.anymarket.com.br'
+anymarket_credentials_path = path.join(ROOT_DIR, 'credentials/anymarket.json')
+
+
+class AnymarketAPIError(Exception):
+    pass
+
+
+class AnymarketAPI:
+    def __init__(
+        self,
+        base_url: str = base_url,
+        credentials_path: str = anymarket_credentials_path,
+    ):
+        self.base_url = base_url
+        self.credentials_path = credentials_path
+        self.credentials = None
+        self.result = None
+
+    @benchmark_with(anymarket_api_logger)
+    @logging_with(anymarket_api_logger)
+    def _set_credentials(self):
+        try:
+            with open(self.credentials_path, 'r') as f:
+                self.credentials = json.load(f)
+        except FileNotFoundError:
+            raise AnymarketAPIError(
+                f'Credentials file not found at {self.credentials_path}.'
+            )
+        except PermissionError:
+            raise AnymarketAPIError(
+                f'No permission to read credentials file at {self.credentials_path}.'
+            )
+        except json.JSONDecodeError:
+            raise AnymarketAPIError(
+                f'The credentials file at {self.credentials_path} contains invalid JSON.'
+            )
+        except Exception as e:
+            raise AnymarketAPIError(f'Failed to get credentials: {e}')
+
+    @benchmark_with(anymarket_api_logger)
+    @logging_with(anymarket_api_logger)
+    def connect(
+        self,
+        method: str = 'GET',
+        endpoint: str = '',
+        payload: List = [],
+        headers: Dict = {},
+    ):
+        try:
+            if not self.credentials:
+                self._set_credentials()
+
+            if 'Content-Type' not in headers:
+                headers['Content-Type'] = 'application/json'
+            headers['gumgaToken'] = self.credentials['token']
+
+            method = method.upper()
+
+            with httpx.Client() as client:
+                response = {
+                    'GET': lambda: client.get(
+                        base_url + endpoint, headers=headers
+                    ),
+                    'POST': lambda: client.post(
+                        base_url + endpoint, json=payload, headers=headers
+                    ),
+                    'PUT': lambda: client.put(
+                        base_url + endpoint, json=payload, headers=headers
+                    ),
+                    'DELETE': lambda: client.delete(
+                        base_url + endpoint, headers=headers
+                    ),
+                    'PATCH': lambda: client.patch(
+                        base_url + endpoint, json=payload, headers=headers
+                    ),
+                }.get(method, lambda: None)()
+
+                if response is None:
+                    raise ValueError(f'Unsupported HTTP method: {method}')
+
+                response.raise_for_status()
+                self.result = response
+
+        except httpx.HTTPStatusError as e:
+            raise AnymarketAPIError(f'HTTP error occurred: {e}')
+        except httpx.RequestError as e:
+            raise AnymarketAPIError(f'Failed to connect: {e}')
+        except ValueError as e:
+            raise AnymarketAPIError(str(e))
+        except Exception as e:
+            raise AnymarketAPIError(f'Failed to connect: {e}')
+
+    @benchmark_with(anymarket_api_logger)
+    @logging_with(anymarket_api_logger)
+    def get_products_quantity(self) -> int:
+        try:
+            self.connect(endpoint='/v2/products')
+            total_elements = self.result['page']['totalElements']
+            return total_elements
+        except Exception as e:
+            raise AnymarketAPIError(f'Failed to connect: {e}')
+
+    def get_product_by_id(self, product_id: str) -> Dict:
+        try:
+            self.connect(endpoint=f'/v2/products/{product_id}')
+            anymarket_api_logger.info(
+                f"Product: {self.result['id']} successfully retrieved"
+            )
+            return self.result
+        except Exception as e:
+            raise AnymarketAPIError(f'Failed to connect: {e}')
+
+    def get_products_by_ids(self, product_ids: List[str]) -> List[Dict]:
+        try:
+            result = []
+            for product_id in product_ids:
+                result.append(self.get_product_by_id(product_id))
+            self.result = result
+            return self.result
+        except Exception as e:
+            raise AnymarketAPIError(f'Failed to connect: {e}')
+
+    def get_ads_by_partner_id(self, partner_id: str) -> List[Dict]:
+        try:
+            self.connect(
+                endpoint=f'/v2/skus/marketplaces?partnerID={partner_id}'
+            )
+            return self.result
+        except Exception as e:
+            raise AnymarketAPIError(f'Failed to connect: {e}')
+
+    def get_product_by_partner_id(self, partner_id: str) -> Dict:
+        try:
+            self.connect(endpoint=f'/v2/products?partnerId={partner_id}')
+            return self.result.get('content', [])[0]
+        except Exception as e:
+            raise AnymarketAPIError(f'Failed to connect: {e}')
+
+    def get_products_by_partner_ids(
+        self, partner_ids: List[str]
+    ) -> List[Dict]:
+        try:
+            result = []
+            for partner_id in partner_ids:
+                result.append(self.get_product_by_partner_id(partner_id))
+            self.result = result
+            return self.result
+        except Exception as e:
+            raise AnymarketAPIError(f'Failed to connect: {e}')
+
+    def get_first_ad_of_marketplace(
+        self, ads: List[Dict], marketplace: str
+    ) -> Dict:
+        return next(
+            (ad for ad in ads if ad['marketPlace'] == marketplace), None
+        )
+
+    def get_all_products(self) -> List[Dict]:
+        try:
+            quantity = self.get_products_quantity()
+            self.connect(endpoint=f'/v2/products?limit={quantity}')
+            return self.result.get('content', [])
+        except Exception as e:
+            raise AnymarketAPIError(f'Failed to connect: {e}')
+
+    def get_all_products_ids(self) -> List[str]:
+        try:
+            products = self.get_all_products()
+            product_ids = [product['id'] for product in products]
+            return product_ids
+        except Exception as e:
+            raise AnymarketAPIError(f'Failed to connect: {e}')
+
+    def get_all_products_partner_ids(self) -> List[str]:
+        try:
+            products = self.get_all_products()
+            partner_ids = [
+                sku.get('partnerId', '')
+                for product in products
+                for sku in product.get('skus', [])
+            ]
+            return partner_ids
+        except Exception as e:
+            raise AnymarketAPIError(f'Failed to connect: {e}')
+
+    def get_partner_and_product_ids(self) -> (List[str], List[str]):
+        try:
+            products = self.get_all_products()
+            partner_ids = [
+                sku.get('partnerId', '')
+                for product in products
+                for sku in product.get('skus', [])
+            ]
+            product_ids = [product['id'] for product in products]
+            return partner_ids, product_ids
+        except Exception as e:
+            raise AnymarketAPIError(f'Failed to connect: {e}')
+
+    def set_product_for_manual_pricing(self, product_id: str):
+        try:
+            payload = '{\n  "calculatedPrice": false,\n  "definitionPriceScope": "SKU_MARKETPLACE"\n}'
+            headers = {'Content-Type': 'application/merge-patch+json'}
+            self.connect(
+                rest_verb='PATCH',
+                endpoint=f'/v2/products/{product_id}',
+                headers=headers,
+                payload=payload,
+            )
+            anymarket_api_logger.info(
+                f'Set product: {product_id} for manual pricing'
+            )
+        except Exception as e:
+            anymarket_api_logger.exception(e)
+
+    def set_products_for_manual_pricing(self, product_ids: list):
+        try:
+            for product_id in product_ids:
+                self.set_product_for_manual_pricing(product_id)
+        except Exception as e:
+            anymarket_api_logger.exception(e)
+
+    def query_all_products(self, partner_ids: list):
+        try:
+            advertisements = []
+            for partner_id in partner_ids:
+                advertisements.extend(
+                    self.get_ads_by_partner_id(partner_id=partner_id)
+                )
+            ads_df = pd.json_normalize(advertisements)
+            ads_df.rename(
+                columns={'skuInMarketplace': 'sku (*)'}, inplace=True
+            )
+            ads_df = ads_df[
+                [
+                    'sku (*)',
+                    'id',
+                    'marketPlace',
+                    'publicationStatus',
+                    'marketplaceStatus',
+                    'price',
+                    'fields.title',
+                ]
+            ]
+            ads_df.dropna(subset=['fields.title'], inplace=True)
+            return ads_df
+        except Exception as e:
+            anymarket_api_logger.exception(e)
+
+    def update_price(self, ad_id: str, new_price: float):
+        payload = [
+            {
+                'id': ad_id,
+                'price': new_price,
+                'discountPrice': new_price,
+            }
+        ]
+        payload_str = json.dumps(payload)
+        self.connect(
+            rest_verb='PUT',
+            endpoint='/v2/skus/marketplaces/prices',
+            payload=payload_str,
+        )
+        anymarket_api_logger.info(
+            f'Advertisement: {ad_id} updated price to {new_price}'
+        )
+
+    def change_price(self, marketplace: str, ads_df: pd.DataFrame):
+        try:
+            for index, row in ads_df[
+                ads_df['marketPlace'] == marketplace
+            ].iterrows():
+                self.update_price(row['id'], row['special_price'])
+        except Exception as e:
+            anymarket_api_logger.exception(e)
+
+    def get_from_marketplace(self, marketplace: str):
+        self.connect(
+            endpoint='/v2/transmissions/marketplace/0/0/sort/statusFilter'
+        )
+        return self.result
+
+
+if __name__ == '__main__':
+    am = AnymarketAPI(anymarket_credentials_path)
+    all_products = am.get_all_products()
+    partner_ids, product_ids = am.get_partner_and_product_ids()
+    change = am.set_products_for_manual_pricing(product_ids)
+    ads_df = am.query_all_products(partner_ids)
+    am.change_price('ECOMMERCE', ads_df)
