@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "kami-pricing"
 version = "0.2.0"
-description = "Pricing tool to acquire the best positioning without losing profit margin in different marketplaces, using the ANYMARKET API"
+description = "Pricing tool to acquire the best positioning without losing profit margin in different marketplaces, using the ANYMARKET API or PLUGG.TO API"
 authors = ["Maicon de Menezes <maicondmenezes@gmail.com>", "Gustavo Lima <gustavasd@gmail.com>", "Marcos Madeira <mmadeirasilva5@gmail.com>"]
 readme = "README.md"
 packages = [{include = "kami_princing"}]
@@ -23,6 +23,7 @@ schedule = "^1.2.0"
 kami-gsuite = "^0.1.0"
 httpx = "^0.25.0"
 pandas = "^2.1.1"
+beautifulsoup4 = "^4.12.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.3.1"

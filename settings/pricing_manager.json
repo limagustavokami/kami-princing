@@ -3,5 +3,6 @@
   "marketplace": "BELEZA_NA_WEB",
   "product_urls_sheet_name":"pricing_teste",
   "skus_sellers_sheet_name":"sku",
-  "integrator": "PLUGG_TO"
+  "integrator": "PLUGG_TO",
+  "every_seconds": 5
 }

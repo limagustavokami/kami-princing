@@ -140,7 +140,7 @@ class PluggToAPI:
             payload = {'special_price': new_price}         
             self.connect(
                 method='PUT',
-                endpoint=f'/skus/{str(sku)}',
+                endpoint=f'/skus/{sku}',
                 payload=payload,
             )
             plugg_to_api_logger.info(
