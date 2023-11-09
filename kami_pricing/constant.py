@@ -2,6 +2,9 @@ import os
 
 SOURCE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.abspath(SOURCE_DIR + '/../')
+ID_HAIRPRO_SHEET = '1u7dCTQzbqgKSSjpSVtsUl7ea2j2YgW4Ko2nB9akE1ws'
+GOOGLE_API_CREDENTIALS = os.path.join(ROOT_DIR, 'credentials/google_api.json')
+PRICING_MANAGER_FILE = os.path.join(ROOT_DIR, 'settings/pricing_manager.json')
 COLUMNS_ALL_SELLER = [
     'sku',
     'brand',

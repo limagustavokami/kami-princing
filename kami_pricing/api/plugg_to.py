@@ -1,16 +1,15 @@
 import json
 import logging
 from os import path
-from typing import Dict, List, Union
+from typing import Dict, List
 
 import httpx
 import pandas as pd
-import requests
 from kami_logging import benchmark_with, logging_with
 
 from kami_pricing.constant import ROOT_DIR
 
-plugg_to_api_logger = logging.getLogger('Anymarket API')
+plugg_to_api_logger = logging.getLogger('PluggTo API')
 base_url: str = 'https://api.plugg.to'
 plugg_to_credentials_path: str = path.join(
     ROOT_DIR, 'credentials/plugg_to.json'
@@ -30,6 +29,7 @@ class PluggToAPI:
         self.base_url = base_url
         self.credentials_path = credentials_path
         self.credentials = None
+        self.access_token = None
         self.result = None
 
     @benchmark_with(plugg_to_api_logger)
@@ -52,47 +52,109 @@ class PluggToAPI:
             )
         except Exception as e:
             raise PluggToAPIError(f'Failed to get credentials: {e}')
-
-    def connect(self) -> str:
+    
+    @benchmark_with(plugg_to_api_logger)
+    @logging_with(plugg_to_api_logger)
+    def _set_access_token(self):
         try:
-            with open(self.credentials_path, 'r') as file:
-                credentials = json.load(file)
-            payload = {
-                'client_id': credentials['client_id'],
-                'client_secret': credentials['client_secret'],
-                'username': credentials['username'],
-                'password': credentials['password'],
-                'grant_type': 'password',
-            }
-            url = f'{self.base_url}/oauth/token'
+            if not self.credentials:
+                self._set_credentials()
+
             headers = {
                 'accept': 'application/json',
                 'Content-Type': 'application/x-www-form-urlencoded',
             }
-            response = requests.post(url, data=payload, headers=headers)
-            response.raise_for_status()
-            return response.json()['access_token']
-        except Exception as e:
-            raise Exception(f'Failed to connect: {e}')
-
-    def _set_access_token(self):
-        try:
-            self.access_token = self.connect()
+            payload = {
+                'client_id': self.credentials['client_id'],
+                'client_secret': self.credentials['client_secret'],
+                'username': self.credentials['username'],
+                'password': self.credentials['password'],
+                'grant_type': 'password',
+            }
+            with httpx.Client() as client:
+                response = client.post(
+                    f'{self.base_url}/oauth/token',
+                    data=payload,
+                    headers=headers
+                )
+                response.raise_for_status()
+                self.access_token = response.json()['access_token']
         except Exception as e:
             raise Exception(f'Failed to set access token: {e}')
 
-    def update_special_price(self, sku: str, price: Union[float, int]) -> None:
+    def connect(
+        self,
+        method: str = 'GET',
+        endpoint: str = '',
+        payload: List = [],
+        headers: Dict = {},              
+    ):
         try:
-            headers = {
-                'accept': 'application/json',
-                'Authorization': f'Bearer {self.access_token}',
-                'Content-Type': 'application/json',
-            }
-            url = f'{self.base_url}/skus/{sku}'
-            data = {'special_price': price}
-            response = requests.put(url, headers=headers, json=data)
-            response.raise_for_status()
-        except requests.exceptions.RequestException as e:
-            raise Exception(f'Failed to update special price: {e}')
+            if not self.access_token:
+                self._set_access_token()
+            if 'Content-Type' not in headers:
+                headers['Content-Type'] = 'application/json'
+            if 'accept' not in headers:
+                headers['accept'] = 'application/json'
+            if 'Authorization' not in headers:
+                headers['Authorization'] = f'Bearer {self.access_token}'
+                
+            method = method.upper()
+
+            with httpx.Client() as client:
+                response = {
+                    'GET': lambda: client.get(
+                        self.base_url + endpoint, headers=headers
+                    ),
+                    'POST': lambda: client.post(
+                        self.base_url + endpoint, json=payload, headers=headers
+                    ),
+                    'PUT': lambda: client.put(
+                        self.base_url + endpoint, json=payload, headers=headers
+                    ),
+                    'DELETE': lambda: client.delete(
+                        self.base_url + endpoint, headers=headers
+                    ),
+                    'PATCH': lambda: client.patch(
+                        self.base_url + endpoint, json=payload, headers=headers
+                    ),
+                }.get(method, lambda: None)()
+
+                if response is None:
+                    raise ValueError(f'Unsupported HTTP method: {method}')
+
+                response.raise_for_status()
+                self.result = response.json()
+                
+        except httpx.HTTPStatusError as e:
+            raise PluggToAPIError(f'HTTP error occurred: {e}')
+        except httpx.RequestError as e:
+            raise PluggToAPIError(f'Failed to connect: {e}')
+        except ValueError as e:
+            raise PluggToAPIError(str(e))
         except Exception as e:
-            raise Exception(f'An error occurred: {e}')
+            raise PluggToAPIError(f'Failed to connect: {e}')
+
+    def update_price(self, sku: str, new_price: float):
+        try:
+            payload = {'special_price': new_price}         
+            self.connect(
+                method='PUT',
+                endpoint=f'/skus/{sku}/',
+                payload=payload,
+            )
+            plugg_to_api_logger.info(
+                f'Product: {sku} updated price to {new_price}'
+            )
+        except PluggToAPIError as e:
+            raise PluggToAPIError(f'Failed to update price: {e}')
+        
+    def update_prices(self, pricing_df: pd.DataFrame):
+        try:            
+            for index, row in pricing_df.iterrows():                
+                self.update_price(
+                    sku=row['sku (*)'], new_price=row['special_price']
+                )
+        except Exception as e:
+            PluggToAPIError.exception(e)
+            raise

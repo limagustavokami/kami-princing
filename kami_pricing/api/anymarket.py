@@ -10,8 +10,11 @@ from kami_logging import benchmark_with, logging_with
 from kami_pricing.constant import ROOT_DIR
 
 anymarket_api_logger = logging.getLogger('Anymarket API')
-base_url = 'https://sandbox-api.anymarket.com.br'
-anymarket_credentials_path = path.join(ROOT_DIR, 'credentials/anymarket.json')
+test_base_url = 'https://sandbox-api.anymarket.com.br'
+base_url = 'https://api.anymarket.com.br'
+anymarket_credentials_path = path.join(
+    ROOT_DIR, 'credentials/anymarket_hairpro.json'
+)
 
 
 class AnymarketAPIError(Exception):
@@ -72,19 +75,19 @@ class AnymarketAPI:
             with httpx.Client() as client:
                 response = {
                     'GET': lambda: client.get(
-                        base_url + endpoint, headers=headers
+                        self.base_url + endpoint, headers=headers
                     ),
                     'POST': lambda: client.post(
-                        base_url + endpoint, json=payload, headers=headers
+                        self.base_url + endpoint, json=payload, headers=headers
                     ),
                     'PUT': lambda: client.put(
-                        base_url + endpoint, json=payload, headers=headers
+                        self.base_url + endpoint, json=payload, headers=headers
                     ),
                     'DELETE': lambda: client.delete(
-                        base_url + endpoint, headers=headers
+                        self.base_url + endpoint, headers=headers
                     ),
                     'PATCH': lambda: client.patch(
-                        base_url + endpoint, json=payload, headers=headers
+                        self.base_url + endpoint, json=payload, headers=headers
                     ),
                 }.get(method, lambda: None)()
 
@@ -92,7 +95,7 @@ class AnymarketAPI:
                     raise ValueError(f'Unsupported HTTP method: {method}')
 
                 response.raise_for_status()
-                self.result = response
+                self.result = response.json()
 
         except httpx.HTTPStatusError as e:
             raise AnymarketAPIError(f'HTTP error occurred: {e}')
@@ -214,7 +217,7 @@ class AnymarketAPI:
             payload = '{\n  "calculatedPrice": false,\n  "definitionPriceScope": "SKU_MARKETPLACE"\n}'
             headers = {'Content-Type': 'application/merge-patch+json'}
             self.connect(
-                rest_verb='PATCH',
+                method='PATCH',
                 endpoint=f'/v2/products/{product_id}',
                 headers=headers,
                 payload=payload,
@@ -232,7 +235,7 @@ class AnymarketAPI:
         except Exception as e:
             anymarket_api_logger.exception(e)
 
-    def query_all_products(self, partner_ids: list):
+    def get_products_ads(self, partner_ids: list):
         try:
             advertisements = []
             for partner_id in partner_ids:
@@ -265,11 +268,11 @@ class AnymarketAPI:
                 'id': ad_id,
                 'price': new_price,
                 'discountPrice': new_price,
-            }
+            },
         ]
         payload_str = json.dumps(payload)
         self.connect(
-            rest_verb='PUT',
+            method='PUT',
             endpoint='/v2/skus/marketplaces/prices',
             payload=payload_str,
         )
@@ -291,12 +294,49 @@ class AnymarketAPI:
             endpoint='/v2/transmissions/marketplace/0/0/sort/statusFilter'
         )
         return self.result
+    
+    def update_prices_on_all_marketplaces(self, pricing_df: pd.DataFrame):
+        try:
 
+            self._set_integrator_api()
+            for index, row in pricing_df.iterrows():
+                product = self.get_product_by_partner_id(
+                    partner_id=row['sku (*)']
+                )
+                self.set_product_for_manual_pricing(
+                    product_id=product['id']
+                )
+                ads = self.get_ads_by_partner_id(
+                    partner_id=row['sku (*)']
+                )
+                for ad in ads:
+                    self.update_price(
+                        ad_id=ad['id'], new_price=row['special_price']
+                    )
+        except Exception as e:
+            anymarket_api_logger.exception(e)
+            raise
 
-if __name__ == '__main__':
-    am = AnymarketAPI(anymarket_credentials_path)
-    all_products = am.get_all_products()
-    partner_ids, product_ids = am.get_partner_and_product_ids()
-    change = am.set_products_for_manual_pricing(product_ids)
-    ads_df = am.query_all_products(partner_ids)
-    am.change_price('ECOMMERCE', ads_df)
+    def update_prices_on_marketplace(
+        self, pricing_df: pd.DataFrame, marketplace: str = 'BELEZA_NA_WEB'
+    ):
+        try:            
+            for index, row in pricing_df.iterrows():
+                product = self.get_product_by_partner_id(
+                    partner_id=row['sku (*)']
+                )
+                self.set_product_for_manual_pricing(
+                    product_id=product['id']
+                )
+                ads = self.get_ads_by_partner_id(
+                    partner_id=row['sku (*)']
+                )
+                marketplace_ad = self.get_first_ad_of_marketplace(
+                    ads=ads, marketplace=marketplace
+                )
+                self.update_price(
+                    ad_id=marketplace_ad['id'], new_price=row['special_price']
+                )
+        except Exception as e:
+            anymarket_api_logger.exception(e)
+            raise
