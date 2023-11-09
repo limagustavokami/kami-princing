@@ -110,7 +110,7 @@ class PluggToAPI:
                         self.base_url + endpoint, json=payload, headers=headers
                     ),
                     'PUT': lambda: client.put(
-                        self.base_url + endpoint, json=payload, headers=headers
+                        self.base_url + endpoint, data=payload, headers=headers
                     ),
                     'DELETE': lambda: client.delete(
                         self.base_url + endpoint, headers=headers
@@ -137,11 +137,12 @@ class PluggToAPI:
 
     def update_price(self, sku: str, new_price: float):
         try:
-            payload = {'special_price': new_price}         
+            payload = [{'special_price': new_price},]
+            payload_str = json.dumps(payload)                     
             self.connect(
                 method='PUT',
                 endpoint=f'/skus/{sku}',
-                payload=payload,
+                payload=payload_str,
             )
             plugg_to_api_logger.info(
                 f'Product: {sku} updated price to {new_price}'

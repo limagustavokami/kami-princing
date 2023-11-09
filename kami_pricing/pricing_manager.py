@@ -1,3 +1,4 @@
+import json
 from os import path
 from typing import List, Tuple
 
@@ -22,9 +23,9 @@ class PricingManagerError(Exception):
 class PricingManager:
     def __init__(
         self,
-        company: str,
-        marketplace: str,
-        integrator: str,
+        company: str = 'HAIRPRO',
+        marketplace: str = 'BELEZA_NA_WEB',
+        integrator: str = 'PLUGG_TO',
         products_ulrs_sheet_name: str = 'pricing_teste',
         skus_sellers_sheet_name: str = 'skushairpro'
     ):
@@ -34,6 +35,30 @@ class PricingManager:
         self.skus_sellers_sheet_name = skus_sellers_sheet_name
         self.integrator = integrator
         self.integrator_api = None
+
+    
+    @classmethod
+    def from_json(cls, file_path: str):
+        with open(file_path, 'r') as file:
+            json_data = json.load(file)        
+        
+        company = json_data.get('company', 'HAIRPRO')
+        marketplace = json_data.get('marketplace', 'BELEZA_NA_WEB')
+        integrator = json_data.get('integrator', 'PLUGG_TO')
+        products_ulrs_sheet_name = json_data.get('products_ulrs_sheet_name', 'pricing_teste')
+        skus_sellers_sheet_name = json_data.get('skus_sellers_sheet_name', 'skushairpro')
+
+        if not all([company, marketplace, integrator, products_ulrs_sheet_name, skus_sellers_sheet_name]):
+            raise PricingManagerError("JSON file must contain 'company', 'marketplace', 'products_urls_sheet_name', 'skus_sellers_sheet_name' and 'integrator' keys.")
+
+        
+        return cls(
+            company=company,
+            marketplace=marketplace,
+            integrator=integrator,
+            products_ulrs_sheet_name=products_ulrs_sheet_name,
+            skus_sellers_sheet_name=skus_sellers_sheet_name
+        )
 
     def _set_integrator_api(self):
         try:
@@ -67,17 +92,16 @@ class PricingManager:
             raise
 
     def _get_products_from_gsheet(
-        self, sheet_id: str = ID_HAIRPRO_SHEET, urls_sheet: str ='pricing_teste', sellers_sheet: str = 'skushairpro'
-    ) -> Tuple[List[str], pd.DataFrame]:
+        self, sheet_id: str = ID_HAIRPRO_SHEET) -> Tuple[List[str], pd.DataFrame]:
         try:
             urls = gsheet.convert_range_to_dataframe(
                 sheet_id=sheet_id,
-                sheet_range=f'{urls_sheet}!A1:A',
+                sheet_range=f'{self.products_ulrs_sheet_name}!A1:A',
             )
             urls = list(urls['urls'])
             sku_sellers = gsheet.convert_range_to_dataframe(
                 sheet_id=sheet_id,
-                sheet_range=f'{sellers_sheet}!A1:B',
+                sheet_range=f'{self.skus_sellers_sheet_name}!A1:B',
             )
             sku_sellers = sku_sellers.rename(
                 columns={0: 'SKU Seller', 1: 'SKU Beleza'}
