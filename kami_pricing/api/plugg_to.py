@@ -12,7 +12,7 @@ from kami_pricing.constant import ROOT_DIR
 plugg_to_api_logger = logging.getLogger('PluggTo API')
 base_url: str = 'https://api.plugg.to'
 plugg_to_credentials_path: str = path.join(
-    ROOT_DIR, 'credentials/plugg_to.json'
+    ROOT_DIR, 'credentials/plugg_to_hairpro.json'
 )
 
 
@@ -140,7 +140,7 @@ class PluggToAPI:
             payload = {'special_price': new_price}         
             self.connect(
                 method='PUT',
-                endpoint=f'/skus/{sku}/',
+                endpoint=f'/skus/{str(sku)}',
                 payload=payload,
             )
             plugg_to_api_logger.info(
@@ -153,8 +153,8 @@ class PluggToAPI:
         try:            
             for index, row in pricing_df.iterrows():                
                 self.update_price(
-                    sku=row['sku (*)'], new_price=row['special_price']
+                    sku=str(row['sku (*)']), new_price=row['special_price']
                 )
         except Exception as e:
-            PluggToAPIError.exception(e)
+            PluggToAPIError(e)
             raise

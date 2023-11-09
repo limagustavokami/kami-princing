@@ -12,12 +12,20 @@ def create_pricing_manager_instance_from_json(json_file_path: str) -> PricingMan
 
     company = json_data.get('company')
     marketplace = json_data.get('marketplace')
+    products_urls_sheet_name = json_data.get('products_urls_sheet_name')
+    skus_sellers_sheet_name = json_data.get('skus_sellers_sheet_name')
     integrator = json_data.get('integrator')
 
     if not all([company, marketplace, integrator]):
-        raise PricingManagerError("JSON file must contain 'company', 'marketplace', and 'integrator' keys.")
+        raise PricingManagerError("JSON file must contain 'company', 'marketplace', 'products_urls_sheet_name', 'skus_sellers_sheet_name' and 'integrator' keys.")
 
-    pricing_manager_instance = PricingManager(company=company, marketplace=marketplace, integrator=integrator)
+    pricing_manager_instance = PricingManager(
+        company=company,        
+        marketplace=marketplace,
+        products_ulrs_sheet_name=products_urls_sheet_name,
+        skus_sellers_sheet_name=skus_sellers_sheet_name,
+        integrator=integrator
+    )
 
     return pricing_manager_instance
 

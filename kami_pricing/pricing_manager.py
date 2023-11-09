@@ -20,9 +20,18 @@ class PricingManagerError(Exception):
     pass
 
 class PricingManager:
-    def __init__(self, company: str, marketplace: str, integrator: str):
+    def __init__(
+        self,
+        company: str,
+        marketplace: str,
+        integrator: str,
+        products_ulrs_sheet_name: str = 'pricing_teste',
+        skus_sellers_sheet_name: str = 'skushairpro'
+    ):
         self.company = company
         self.marketplace = marketplace
+        self.products_ulrs_sheet_name = products_ulrs_sheet_name
+        self.skus_sellers_sheet_name = skus_sellers_sheet_name
         self.integrator = integrator
         self.integrator_api = None
 
