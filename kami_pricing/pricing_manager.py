@@ -17,8 +17,10 @@ from kami_pricing.scraper import Scraper
 
 gsheet = KamiGsheet(api_version='v4', credentials_path=GOOGLE_API_CREDENTIALS)
 
+
 class PricingManagerError(Exception):
     pass
+
 
 class PricingManager:
     def __init__(
@@ -27,7 +29,7 @@ class PricingManager:
         marketplace: str = 'BELEZA_NA_WEB',
         integrator: str = 'PLUGG_TO',
         products_ulrs_sheet_name: str = 'pricing_teste',
-        skus_sellers_sheet_name: str = 'skushairpro'
+        skus_sellers_sheet_name: str = 'skushairpro',
     ):
         self.company = company
         self.marketplace = marketplace
@@ -36,63 +38,78 @@ class PricingManager:
         self.integrator = integrator
         self.integrator_api = None
 
-    
     @classmethod
     def from_json(cls, file_path: str):
         with open(file_path, 'r') as file:
-            json_data = json.load(file)        
-        
+            json_data = json.load(file)
+
         company = json_data.get('company', 'HAIRPRO')
         marketplace = json_data.get('marketplace', 'BELEZA_NA_WEB')
         integrator = json_data.get('integrator', 'PLUGG_TO')
-        products_ulrs_sheet_name = json_data.get('products_ulrs_sheet_name', 'pricing_teste')
-        skus_sellers_sheet_name = json_data.get('skus_sellers_sheet_name', 'skushairpro')
+        products_ulrs_sheet_name = json_data.get(
+            'products_ulrs_sheet_name', 'pricing_teste'
+        )
+        skus_sellers_sheet_name = json_data.get(
+            'skus_sellers_sheet_name', 'skushairpro'
+        )
 
-        if not all([company, marketplace, integrator, products_ulrs_sheet_name, skus_sellers_sheet_name]):
-            raise PricingManagerError("JSON file must contain 'company', 'marketplace', 'products_urls_sheet_name', 'skus_sellers_sheet_name' and 'integrator' keys.")
+        if not all(
+            [
+                company,
+                marketplace,
+                integrator,
+                products_ulrs_sheet_name,
+                skus_sellers_sheet_name,
+            ]
+        ):
+            raise PricingManagerError(
+                "JSON file must contain 'company', 'marketplace', 'products_urls_sheet_name', 'skus_sellers_sheet_name' and 'integrator' keys."
+            )
 
-        
         return cls(
             company=company,
             marketplace=marketplace,
             integrator=integrator,
             products_ulrs_sheet_name=products_ulrs_sheet_name,
-            skus_sellers_sheet_name=skus_sellers_sheet_name
+            skus_sellers_sheet_name=skus_sellers_sheet_name,
         )
 
     def _set_integrator_api(self):
         try:
-            if self.integrator.upper() == 'PLUGG_TO'\
-            and self.marketplace.upper() != 'BELEZA_NA_WEB':
+            if (
+                self.integrator.upper() == 'PLUGG_TO'
+                and self.marketplace.upper() != 'BELEZA_NA_WEB'
+            ):
                 raise PricingManagerError(
                     f'PluggTo only support BELEZA NA WEB marktplace.'
                 )
-            
+
             if self.integrator.upper() == 'ANYMARKET':
                 self.integrator_api = AnymarketAPI(
                     credentials_path=path.join(
                         ROOT_DIR,
                         f'credentials/anymarket_{self.company.lower()}.json',
-                    )                
+                    )
                 )
             elif self.integrator.upper() == 'PLUGG_TO':
                 self.integrator_api = PluggToAPI(
                     credentials_path=path.join(
                         ROOT_DIR,
                         f'credentials/plugg_to_{self.company.lower()}.json',
-                    )                    
+                    )
                 )
             else:
                 raise PricingManagerError(
                     f'Unsupported integrator: {self.integrator}'
                 )
-                
+
         except Exception as e:
             pricing_logger.exception(e)
             raise
 
     def _get_products_from_gsheet(
-        self, sheet_id: str = ID_HAIRPRO_SHEET) -> Tuple[List[str], pd.DataFrame]:
+        self, sheet_id: str = ID_HAIRPRO_SHEET
+    ) -> Tuple[List[str], pd.DataFrame]:
         try:
             urls = gsheet.convert_range_to_dataframe(
                 sheet_id=sheet_id,
@@ -143,18 +160,17 @@ class PricingManager:
 
             if self.integrator == 'PLUGG_TO':
                 self.integrator_api.update_prices(pricing_df=pricing_df)
-            
+
             elif self.integrator == 'ANYMARKET':
                 self.integrator_api.update_prices_on_marketplace(
-                    pricing_df=pricing_df,
-                    marketplace=self.marketplace
+                    pricing_df=pricing_df, marketplace=self.marketplace
                 )
-            
+
             else:
                 raise PricingManagerError(
                     f'Unsupported integrator: {self.integrator}'
                 )
-            
+
         except Exception as e:
             pricing_logger.exception(e)
             raise

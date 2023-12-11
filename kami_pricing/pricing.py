@@ -10,7 +10,7 @@ from kami_pricing.constant import (
     COLUMNS_ALL_SELLER,
     COLUMNS_DIFERENCE,
     COLUMNS_EXCEPT_HAIRPRO,
-    GOOGLE_API_CREDENTIALS
+    GOOGLE_API_CREDENTIALS,
 )
 
 pricing_logger = logging.getLogger('pricing')

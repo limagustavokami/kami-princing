@@ -294,7 +294,7 @@ class AnymarketAPI:
             endpoint='/v2/transmissions/marketplace/0/0/sort/statusFilter'
         )
         return self.result
-    
+
     def update_prices_on_all_marketplaces(self, pricing_df: pd.DataFrame):
         try:
 
@@ -303,12 +303,8 @@ class AnymarketAPI:
                 product = self.get_product_by_partner_id(
                     partner_id=row['sku (*)']
                 )
-                self.set_product_for_manual_pricing(
-                    product_id=product['id']
-                )
-                ads = self.get_ads_by_partner_id(
-                    partner_id=row['sku (*)']
-                )
+                self.set_product_for_manual_pricing(product_id=product['id'])
+                ads = self.get_ads_by_partner_id(partner_id=row['sku (*)'])
                 for ad in ads:
                     self.update_price(
                         ad_id=ad['id'], new_price=row['special_price']
@@ -320,17 +316,13 @@ class AnymarketAPI:
     def update_prices_on_marketplace(
         self, pricing_df: pd.DataFrame, marketplace: str = 'BELEZA_NA_WEB'
     ):
-        try:            
+        try:
             for index, row in pricing_df.iterrows():
                 product = self.get_product_by_partner_id(
                     partner_id=row['sku (*)']
                 )
-                self.set_product_for_manual_pricing(
-                    product_id=product['id']
-                )
-                ads = self.get_ads_by_partner_id(
-                    partner_id=row['sku (*)']
-                )
+                self.set_product_for_manual_pricing(product_id=product['id'])
+                ads = self.get_ads_by_partner_id(partner_id=row['sku (*)'])
                 marketplace_ad = self.get_first_ad_of_marketplace(
                     ads=ads, marketplace=marketplace
                 )
