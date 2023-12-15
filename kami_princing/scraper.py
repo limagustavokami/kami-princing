@@ -74,28 +74,19 @@ class Scraper:
         data_string = datetime.now().strftime('%Y-%m-%d')
         self.all_sellers_df['data'] = data_string
 
-    def remove_duplicates_and_unwanted_rows(self):
-        self.all_sellers_df.drop_duplicates(keep='first', inplace=True)
-        self.all_sellers_df.drop(
-            self.all_sellers_df[
-                self.all_sellers_df['seller_name'].str.contains(
-                    'Beleza na Web'
-                )
-            ].index,
-            inplace=True,
-        )
-
     def filter_seller_data(self):
         seller_name = self.all_sellers_df.groupby('seller_name')
         self.hairpro_df = seller_name.get_group('HAIRPRO')[
             COLUMNS_HAIRPRO
         ].copy()
         self.except_hairpro_df = self.all_sellers_df[
-            ~self.all_sellers_df['seller_name'].str.contains('HAIRPRO')
+            self.all_sellers_df['seller_name'].str.contains('HAIRPRO')
         ][COLUMNS_EXCEPT_HAIRPRO].copy()
-        self.except_hairpro_df.drop_duplicates(
-            subset='sku', keep='first', inplace=True
-        )
+        
+        sugest_price = self.except_hairpro_df.groupby('sku')['price'].idxmin()
+
+        self.except_hairpro_df = self.except_hairpro_df.loc[sugest_price]
+
 
     def calculate_price_differences(self):
         self.difference_price_df = self.hairpro_df[COLUMNS_DIFERENCE].copy()
@@ -153,7 +144,7 @@ class Scraper:
         try:
             self.gather_seller_data()
             self.prepare_all_sellers_df()
-            self.remove_duplicates_and_unwanted_rows()
+            #self.remove_duplicates_and_unwanted_rows()
             self.filter_seller_data()
             self.calculate_price_differences()
             self.merge_and_prepare_final_df()
