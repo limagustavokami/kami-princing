@@ -7,7 +7,7 @@ import requests
 from bs4 import BeautifulSoup
 from kami_logging import benchmark_with, logging_with
 
-from kami_princing.constant import (
+from kami_pricing.constant import (
     COLUMNS_ALL_SELLER,
     COLUMNS_DIFERENCE,
     COLUMNS_EXCEPT_HAIRPRO,

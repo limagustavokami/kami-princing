@@ -18,6 +18,7 @@
 ### Incluir Opção de seleção de lojas
 
 > Lojas da KAMI CO no Anymarket são chamadas de 'organization', existem 2 lojas cadastradas no anymarket:
+
 > - KAMI CO   -> Hair Pro
 > - KAMI CO 2 -> The Best
 
