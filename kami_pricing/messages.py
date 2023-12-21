@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from os import getenv, path
 from typing import Dict, List
 
+from dotenv import load_dotenv
 from jinja2 import Environment, FileSystemLoader
 from kami_logging import benchmark_with, logging_with
 from kami_messenger.botconversa import Botconversa
@@ -12,6 +13,7 @@ from kami_messenger.messenger import Message
 
 from kami_pricing.constant import ROOT_DIR
 
+load_dotenv()
 messages_looger = logging.getLogger('Messages Generator')
 template_loader = FileSystemLoader(path.join(ROOT_DIR, 'messages/templates'))
 template_env = Environment(loader=template_loader)
@@ -31,8 +33,6 @@ class Contact:
         self.sort_index = self.id
 
 
-@logging_with(messages_looger)
-@benchmark_with(messages_looger)
 def get_contacts_from_json(json_file) -> List[Contact]:
     contacts = []
     with open(json_file) as contacts_file:
@@ -45,8 +45,6 @@ def get_contacts_from_json(json_file) -> List[Contact]:
     return contacts
 
 
-@logging_with(messages_looger)
-@benchmark_with(messages_looger)
 def get_contact_by_id(
     search_id: int, contacts: List[Contact]
 ) -> Contact | None:
@@ -59,15 +57,12 @@ def get_contact_by_id(
     return None
 
 
-@logging_with(messages_looger)
 def filter_contact_by_group(
     contacts: List[Contact], group: str
 ) -> List[Contact]:
     return [contact for contact in contacts if group in contact.groups]
 
 
-@logging_with(messages_looger)
-@benchmark_with(messages_looger)
 def generate_message_by_template(
     template_name: str, contact: Contact, message_dict: Dict
 ) -> Message | None:
@@ -82,18 +77,21 @@ def generate_message_by_template(
     )
 
 
-@logging_with(messages_looger)
-def send_email(message: Message, attachments: List[str] = []):
+def send_email(message: Message, attachments: List[str] = []):    
+    login = str(getenv('EMAIL_USER'))
+    password = str(getenv('EMAIL_PASSWORD'))
+    message.sender = login
     email_messenger_str = {
+        
         'name': 'Email - kamico.com.br',
         'messages': [message],
         'credentials': {
-            'login': str(getenv('EMAIL_USER')),
-            'password': str(getenv('EMAIL_PASSWORD')),
+            'login': login,
+            'password': password,
         },
         'engine': '',
     }
-    email_messenger = EmailMessenger(**email_messenger_str)
+    email_messenger = EmailMessenger(**email_messenger_str)    
     email_messenger.sendMessage(attachments=attachments)
 
 
@@ -139,8 +137,6 @@ def send_message_by_all_messengers(
         send_message_by_messenger(messenger, message, contact, attachments)
 
 
-@logging_with(messages_looger)
-@benchmark_with(messages_looger)
 def send_message_by_group(
     template_name: str,
     group: str,
@@ -154,3 +150,19 @@ def send_message_by_group(
             template_name, contact, message_dict
         )
         send_message_by_all_messengers(message, contact, attachments)
+
+
+def send_email_by_group(
+    template_name: str,
+    group: str,
+    message_dict: Dict,
+    contacts: List[Contact],
+    attachments: List[str] = [],
+):
+    filtered_contacts = filter_contact_by_group(contacts, group)
+    for contact in filtered_contacts:
+        message = generate_message_by_template(
+            template_name, contact, message_dict
+        )
+        message.recipients = [contact.email]        
+        send_email(message=message, attachments=attachments)

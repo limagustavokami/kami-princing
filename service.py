@@ -5,12 +5,8 @@ from os import listdir, path, remove
 import schedule
 
 from kami_pricing.constant import PRICING_MANAGER_FILE, ROOT_DIR
-from kami_pricing.messages import get_contacts_from_json, send_message_by_group
-from kami_pricing.pricing_manager import (
-    PricingManager,
-    PricingManagerError,
-    pricing_logger,
-)
+from kami_pricing.messages import get_contacts_from_json, send_email_by_group
+from kami_pricing.pricing_manager import PricingManager, pricing_logger
 
 contacts = get_contacts_from_json(
     path.join(ROOT_DIR, 'messages/contacts.json')
@@ -27,7 +23,7 @@ def _get_files_from(folder_path):
     return files
 
 
-def remove_files_from(folder_path):
+def _remove_files_from(folder_path):
     for filename in _get_files_from(folder_path):
         file_path = path.join(folder_path, filename)
         try:
@@ -51,14 +47,14 @@ def update_prices():
 
 def send_emails():
     reports = _get_files_from(reports_folder)
-    send_message_by_group(
+    send_email_by_group(
         template_name='pricing',
         group='pricing',
         message_dict={'subject': 'Precificação de produtos'},
         contacts=contacts,
         attachments=reports,
     )
-    remove_files_from(reports_folder)
+    _remove_files_from(reports_folder)
 
 
 def main():
