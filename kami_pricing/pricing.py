@@ -161,9 +161,6 @@ class Pricing:
                     difference_price_df[
                         'difference_price'
                     ] = difference_price_df['difference_price'].round(6)
-                    pricing_logger.info(
-                        difference_price_df['difference_price']
-                    )
                 # quando difference_price_df['competitor_price'] for zero e sua serie for ambigua, sugerir um preco de 10% maior
                 # e arrendondar para 2 casas decimais o preco sugerido
                 if (
@@ -174,7 +171,6 @@ class Pricing:
                     difference_price_df['suggest_price'] = difference_price_df[
                         'price'
                     ].round(6)
-                    pricing_logger.info(difference_price_df['suggest_price'])
 
                 # quando o preço da Hairpro for maior que o preço do concorrente, sugerir o preço de 0,10 centavos a menos
                 # que o preço do concorrente e arrendondar para 2 casas decimais o preco sugerido

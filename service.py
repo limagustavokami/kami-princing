@@ -34,9 +34,7 @@ def remove_files_from(folder_path):
             remove(file_path)
 
         except Exception as e:
-            pricing_logger.error(
-                f'Failed to delete {file_path}. Reason: {e}'
-            )
+            pricing_logger.error(f'Failed to delete {file_path}. Reason: {e}')
 
 
 def update_prices():

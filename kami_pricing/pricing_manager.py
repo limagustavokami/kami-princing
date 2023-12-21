@@ -18,7 +18,7 @@ from kami_pricing.constant import (
     ID_HAIRPRO_SHEET,
     ROOT_DIR,
 )
-from kami_pricing.pricing import Pricing, pricing_logger
+from kami_pricing.pricing import Pricing
 from kami_pricing.scraper import Scraper
 
 gsheet = KamiGsheet(api_version='v4', credentials_path=GOOGLE_API_CREDENTIALS)
