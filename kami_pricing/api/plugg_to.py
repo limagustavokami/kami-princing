@@ -82,7 +82,7 @@ class PluggToAPI:
         except Exception as e:
             raise Exception(f'Failed to set access token: {e}')
 
-    def connect(
+    def _connect(
         self,
         method: str = 'GET',
         endpoint: str = '',
@@ -141,7 +141,7 @@ class PluggToAPI:
                 {'special_price': new_price},
             ]
             payload_str = json.dumps(payload)
-            self.connect(
+            self._connect(
                 method='PUT',
                 endpoint=f'/skus/{sku}',
                 payload=payload_str,

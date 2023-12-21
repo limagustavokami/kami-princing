@@ -31,8 +31,6 @@ class Pricing:
         self.limit_rate_ebitda = limit_rate_ebitda
         self.increment_price_new = increment_price_new
 
-    @benchmark_with(pricing_logger)
-    @logging_with(pricing_logger)
     def calc_ebitda(self, df: pd.DataFrame) -> pd.DataFrame:
         try:
             df['COMISSÃO'] = round(
@@ -126,12 +124,6 @@ class Pricing:
         df_sellers_df_list['seller_name'] = df_sellers_df_list[
             'seller_name'
         ].astype(str)
-        df_sellers_df_list.drop(
-            df_sellers_df_list[
-                df_sellers_df_list['seller_name'].str.contains('Beleza na Web')
-            ].index,
-            inplace=True,
-        )
         hairpro_df = df_sellers_df_list.loc[
             df_sellers_df_list['seller_name'] == 'HAIRPRO'
         ]
@@ -143,9 +135,10 @@ class Pricing:
         except_hairpro_df = pd.DataFrame(
             except_hairpro_df, columns=COLUMNS_EXCEPT_HAIRPRO
         )
-        except_hairpro_df.drop_duplicates(
-            subset='sku', keep='first', inplace=True
-        )
+
+        sugest_price = except_hairpro_df.groupby('sku')['price'].idxmin()
+        except_hairpro_df = except_hairpro_df.loc[sugest_price]
+
         difference_price_df = pd.DataFrame(
             hairpro_df, columns=COLUMNS_DIFERENCE
         )
@@ -225,16 +218,16 @@ class Pricing:
             credentials_path=GOOGLE_API_CREDENTIALS,
         )
         kg.clear_range(
-            '1u7dCTQzbqgKSSjpSVtsUl7ea2j2YgW4Ko2nB9akE1ws', 'ebitda!A2:B'
+            '1u7dCTQzbqgKSSjpSVtsUl7ea2j2YgW4Ko2nB9akE1ws', 'ebit!A2:B'
         )
 
         df = df[['sku (*)', 'special_price']]
 
         kg.append_dataframe(
-            df, '1u7dCTQzbqgKSSjpSVtsUl7ea2j2YgW4Ko2nB9akE1ws', 'ebitda!A2:B'
+            df, '1u7dCTQzbqgKSSjpSVtsUl7ea2j2YgW4Ko2nB9akE1ws', 'ebit!A2:B'
         )
         df_ebitda = kg.convert_range_to_dataframe(
-            '1u7dCTQzbqgKSSjpSVtsUl7ea2j2YgW4Ko2nB9akE1ws', 'ebitda!A1:E'
+            '1u7dCTQzbqgKSSjpSVtsUl7ea2j2YgW4Ko2nB9akE1ws', 'ebit!A1:E'
         )
 
         df_ebitda = df_ebitda.replace('None', np.nan)
@@ -248,8 +241,6 @@ class Pricing:
 
         return df_ebitda
 
-    @benchmark_with(pricing_logger)
-    @logging_with(pricing_logger)
     def drop_inactives(self, df: pd.DataFrame):
         kg = KamiGsheet(
             api_version='v4',

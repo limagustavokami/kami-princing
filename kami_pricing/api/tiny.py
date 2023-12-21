@@ -53,7 +53,7 @@ class TinyAPI:
 
     @benchmark_with(tiny_api_logger)
     @logging_with(tiny_api_logger)
-    def connect(
+    def _connect(
         self,
         method: str = 'POST',
         endpoint: str = '',
@@ -112,7 +112,7 @@ class TinyAPI:
     def get_product_by_sku(self, sku: str) -> Dict:
         endpoint = 'produtos.pesquisa.php'
         try:
-            response = self.connect(endpoint=endpoint, query=sku)
+            response = self._connect(endpoint=endpoint, query=sku)
             if 'retorno' in response and response['retorno']['status'] == 'OK':
                 product_dict = response['retorno']['produtos'][0]['produto']
                 return product_dict

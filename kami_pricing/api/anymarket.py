@@ -32,8 +32,6 @@ class AnymarketAPI:
         self.credentials = None
         self.result = None
 
-    @benchmark_with(anymarket_api_logger)
-    @logging_with(anymarket_api_logger)
     def _set_credentials(self):
         try:
             with open(self.credentials_path, 'r') as f:
@@ -53,9 +51,7 @@ class AnymarketAPI:
         except Exception as e:
             raise AnymarketAPIError(f'Failed to get credentials: {e}')
 
-    @benchmark_with(anymarket_api_logger)
-    @logging_with(anymarket_api_logger)
-    def connect(
+    def _connect(
         self,
         method: str = 'GET',
         endpoint: str = '',
@@ -106,11 +102,9 @@ class AnymarketAPI:
         except Exception as e:
             raise AnymarketAPIError(f'Failed to connect: {e}')
 
-    @benchmark_with(anymarket_api_logger)
-    @logging_with(anymarket_api_logger)
     def get_products_quantity(self) -> int:
         try:
-            self.connect(endpoint='/v2/products')
+            self._connect(endpoint='/v2/products')
             total_elements = self.result['page']['totalElements']
             return total_elements
         except Exception as e:
@@ -118,7 +112,7 @@ class AnymarketAPI:
 
     def get_product_by_id(self, product_id: str) -> Dict:
         try:
-            self.connect(endpoint=f'/v2/products/{product_id}')
+            self._connect(endpoint=f'/v2/products/{product_id}')
             anymarket_api_logger.info(
                 f"Product: {self.result['id']} successfully retrieved"
             )
@@ -126,6 +120,8 @@ class AnymarketAPI:
         except Exception as e:
             raise AnymarketAPIError(f'Failed to connect: {e}')
 
+    @benchmark_with(anymarket_api_logger)
+    @logging_with(anymarket_api_logger)
     def get_products_by_ids(self, product_ids: List[str]) -> List[Dict]:
         try:
             result = []
@@ -136,9 +132,11 @@ class AnymarketAPI:
         except Exception as e:
             raise AnymarketAPIError(f'Failed to connect: {e}')
 
+    @benchmark_with(anymarket_api_logger)
+    @logging_with(anymarket_api_logger)
     def get_ads_by_partner_id(self, partner_id: str) -> List[Dict]:
         try:
-            self.connect(
+            self._connect(
                 endpoint=f'/v2/skus/marketplaces?partnerID={partner_id}'
             )
             return self.result
@@ -147,11 +145,13 @@ class AnymarketAPI:
 
     def get_product_by_partner_id(self, partner_id: str) -> Dict:
         try:
-            self.connect(endpoint=f'/v2/products?partnerId={partner_id}')
+            self._connect(endpoint=f'/v2/products?partnerId={partner_id}')
             return self.result.get('content', [])[0]
         except Exception as e:
             raise AnymarketAPIError(f'Failed to connect: {e}')
 
+    @benchmark_with(anymarket_api_logger)
+    @logging_with(anymarket_api_logger)
     def get_products_by_partner_ids(
         self, partner_ids: List[str]
     ) -> List[Dict]:
@@ -171,14 +171,18 @@ class AnymarketAPI:
             (ad for ad in ads if ad['marketPlace'] == marketplace), None
         )
 
+    @benchmark_with(anymarket_api_logger)
+    @logging_with(anymarket_api_logger)
     def get_all_products(self) -> List[Dict]:
         try:
             quantity = self.get_products_quantity()
-            self.connect(endpoint=f'/v2/products?limit={quantity}')
+            self._connect(endpoint=f'/v2/products?limit={quantity}')
             return self.result.get('content', [])
         except Exception as e:
             raise AnymarketAPIError(f'Failed to connect: {e}')
 
+    @benchmark_with(anymarket_api_logger)
+    @logging_with(anymarket_api_logger)
     def get_all_products_ids(self) -> List[str]:
         try:
             products = self.get_all_products()
@@ -187,6 +191,8 @@ class AnymarketAPI:
         except Exception as e:
             raise AnymarketAPIError(f'Failed to connect: {e}')
 
+    @benchmark_with(anymarket_api_logger)
+    @logging_with(anymarket_api_logger)
     def get_all_products_partner_ids(self) -> List[str]:
         try:
             products = self.get_all_products()
@@ -199,6 +205,8 @@ class AnymarketAPI:
         except Exception as e:
             raise AnymarketAPIError(f'Failed to connect: {e}')
 
+    @benchmark_with(anymarket_api_logger)
+    @logging_with(anymarket_api_logger)
     def get_partner_and_product_ids(self) -> (List[str], List[str]):
         try:
             products = self.get_all_products()
@@ -214,9 +222,12 @@ class AnymarketAPI:
 
     def set_product_for_manual_pricing(self, product_id: str):
         try:
-            payload = '{\n  "calculatedPrice": false,\n  "definitionPriceScope": "SKU_MARKETPLACE"\n}'
+            payload = {
+                'calculatedPrice': False,
+                'definitionPriceScope': 'SKU_MARKETPLACE',
+            }
             headers = {'Content-Type': 'application/merge-patch+json'}
-            self.connect(
+            self._connect(
                 method='PATCH',
                 endpoint=f'/v2/products/{product_id}',
                 headers=headers,
@@ -228,6 +239,8 @@ class AnymarketAPI:
         except Exception as e:
             anymarket_api_logger.exception(e)
 
+    @benchmark_with(anymarket_api_logger)
+    @logging_with(anymarket_api_logger)
     def set_products_for_manual_pricing(self, product_ids: list):
         try:
             for product_id in product_ids:
@@ -235,6 +248,8 @@ class AnymarketAPI:
         except Exception as e:
             anymarket_api_logger.exception(e)
 
+    @benchmark_with(anymarket_api_logger)
+    @logging_with(anymarket_api_logger)
     def get_products_ads(self, partner_ids: list):
         try:
             advertisements = []
@@ -263,18 +278,15 @@ class AnymarketAPI:
             anymarket_api_logger.exception(e)
 
     def update_price(self, ad_id: str, new_price: float):
-        payload = [
-            {
-                'id': ad_id,
-                'price': new_price,
-                'discountPrice': new_price,
-            },
-        ]
-        payload_str = json.dumps(payload)
-        self.connect(
+        payload = {
+            'id': ad_id,
+            'price': new_price,
+            'discountPrice': new_price,
+        }
+        self._connect(
             method='PUT',
             endpoint='/v2/skus/marketplaces/prices',
-            payload=payload_str,
+            payload=[payload],
         )
         anymarket_api_logger.info(
             f'Advertisement: {ad_id} updated price to {new_price}'
@@ -290,11 +302,13 @@ class AnymarketAPI:
             anymarket_api_logger.exception(e)
 
     def get_from_marketplace(self, marketplace: str):
-        self.connect(
+        self._connect(
             endpoint='/v2/transmissions/marketplace/0/0/sort/statusFilter'
         )
         return self.result
 
+    @benchmark_with(anymarket_api_logger)
+    @logging_with(anymarket_api_logger)
     def update_prices_on_all_marketplaces(self, pricing_df: pd.DataFrame):
         try:
 
@@ -316,8 +330,8 @@ class AnymarketAPI:
     def update_prices_on_marketplace(
         self, pricing_df: pd.DataFrame, marketplace: str = 'BELEZA_NA_WEB'
     ):
-        try:
-            for index, row in pricing_df.iterrows():
+        for index, row in pricing_df.iterrows():
+            try:
                 product = self.get_product_by_partner_id(
                     partner_id=row['sku (*)']
                 )
@@ -329,6 +343,6 @@ class AnymarketAPI:
                 self.update_price(
                     ad_id=marketplace_ad['id'], new_price=row['special_price']
                 )
-        except Exception as e:
-            anymarket_api_logger.exception(e)
-            raise
+            except Exception as e:
+                anymarket_api_logger.exception(e)
+                continue

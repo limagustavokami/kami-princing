@@ -1,9 +1,15 @@
 import json
+import logging
 from os import path
 from typing import List, Tuple
 
 import pandas as pd
+from jinja2 import Environment, FileSystemLoader
 from kami_gsuite.kami_gsheet import KamiGsheet
+from kami_logging import benchmark_with, logging_with
+from kami_messenger.botconversa import Botconversa
+from kami_messenger.email_messenger import EmailMessenger
+from kami_messenger.messenger import Message
 
 from kami_pricing.api.anymarket import AnymarketAPI
 from kami_pricing.api.plugg_to import PluggToAPI
@@ -16,6 +22,7 @@ from kami_pricing.pricing import Pricing, pricing_logger
 from kami_pricing.scraper import Scraper
 
 gsheet = KamiGsheet(api_version='v4', credentials_path=GOOGLE_API_CREDENTIALS)
+pricing_logger = logging.getLogger('Pricing Manager')
 
 
 class PricingManagerError(Exception):
@@ -45,9 +52,9 @@ class PricingManager:
 
         company = json_data.get('company', 'HAIRPRO')
         marketplace = json_data.get('marketplace', 'BELEZA_NA_WEB')
-        integrator = json_data.get('integrator', 'PLUGG_TO')
+        integrator = json_data.get('integrator', 'ANYMARKET')
         products_ulrs_sheet_name = json_data.get(
-            'products_ulrs_sheet_name', 'pricing_teste'
+            'products_ulrs_sheet_name', 'pricing'
         )
         skus_sellers_sheet_name = json_data.get(
             'skus_sellers_sheet_name', 'skushairpro'
@@ -133,7 +140,9 @@ class PricingManager:
             return self._get_products_from_gsheet(sheet_id=ID_HAIRPRO_SHEET)
         raise ValueError(f'Unsupported company: {self.company}')
 
-    def scraping_and_pricing(self) -> pd.DataFrame:
+    @benchmark_with(pricing_logger)
+    @logging_with(pricing_logger)
+    def scraping_and_pricing(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
         try:
             products_urls, products_skus = self.get_products_from_company()
             pc = Pricing()
@@ -148,11 +157,13 @@ class PricingManager:
             func_ebitda = pc.ebitda_proccess(pricing_df)
             df_ebitda = pc.pricing(func_ebitda)
             df_final = pc.drop_inactives(df_ebitda)
-            return df_final[['sku (*)', 'special_price']]
+            return sellers_list, df_final[['sku (*)', 'special_price']]
         except Exception as e:
             pricing_logger.exception(e)
             raise
 
+    @benchmark_with(pricing_logger)
+    @logging_with(pricing_logger)
     def update_prices(self, pricing_df: pd.DataFrame):
         try:
             if not self.integrator_api:
