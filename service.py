@@ -30,12 +30,13 @@ def _remove_files_from(folder_path):
             remove(file_path)
 
         except Exception as e:
-            pricing_logger.error(f'Failed to delete {file_path}. Reason: {e}')
+            pricing_logger.error(f'Failed to delete {file_path}. Reason: {str(e)}')
 
 
 def update_prices():
     pricing_manager = PricingManager.from_json(file_path=PRICING_MANAGER_FILE)
     scraping_df, pricing_df = pricing_manager.scraping_and_pricing()
+    _remove_files_from(reports_folder)
     pricing_df.to_excel(
         reports_folder + '/novos_precos.xlsx', index=False, engine='openpyxl'
     )
@@ -57,19 +58,23 @@ def send_emails():
     _remove_files_from(reports_folder)
 
 
-def main():
+def main():    
+    update_prices()
+    send_emails()
+
     with open(PRICING_MANAGER_FILE, 'r') as file:
         json_data = json.load(file)
         secs = json_data.get('every_seconds')
+
     schedule.every(secs).seconds.do(update_prices)
-    schedule.every(round(secs * 1.5)).seconds.do(send_emails)
+    schedule.every(secs*1.2).seconds.do(send_emails)
 
     while True:
         try:
             schedule.run_pending()
             time.sleep(5)
         except Exception as e:
-            pricing_logger.info(f'Error when updating prices: {e}')
+            pricing_logger.info(f'Error when updating prices: {str(e)}')
 
 
 if __name__ == '__main__':

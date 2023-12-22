@@ -60,7 +60,7 @@ class Pricing:
                 'Division by zero encountered while calculating percentages.'
             )
         except Exception as e:
-            pricing_logger.error(f'An unexpected error occurred: {e}')
+            pricing_logger.error(f'An unexpected error occurred: {str(e)}')
             return None
 
     @benchmark_with(pricing_logger)
@@ -110,7 +110,7 @@ class Pricing:
                     )
             return df
         except Exception as e:
-            pricing_logger.error(f'An unexpected error occurred: {e}')
+            pricing_logger.error(f'An unexpected error occurred: {str(e)}')
             return None
 
     @benchmark_with(pricing_logger)
@@ -257,5 +257,5 @@ class Pricing:
 
             return df
         except Exception as e:
-            pricing_logger.exception(e)
+            pricing_logger.exception(str(e))
             return None

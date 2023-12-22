@@ -4,12 +4,8 @@ from os import path
 from typing import List, Tuple
 
 import pandas as pd
-from jinja2 import Environment, FileSystemLoader
 from kami_gsuite.kami_gsheet import KamiGsheet
 from kami_logging import benchmark_with, logging_with
-from kami_messenger.botconversa import Botconversa
-from kami_messenger.email_messenger import EmailMessenger
-from kami_messenger.messenger import Message
 
 from kami_pricing.api.anymarket import AnymarketAPI
 from kami_pricing.api.plugg_to import PluggToAPI
@@ -111,7 +107,7 @@ class PricingManager:
                 )
 
         except Exception as e:
-            pricing_logger.exception(e)
+            pricing_logger.exception(str(e))
             raise
 
     def _get_products_from_gsheet(
@@ -132,7 +128,7 @@ class PricingManager:
             )
             return urls, sku_sellers
         except Exception as e:
-            pricing_logger.exception(e)
+            pricing_logger.exception(str(e))
             raise
 
     def get_products_from_company(self) -> Tuple[List[str], pd.DataFrame]:
@@ -157,9 +153,11 @@ class PricingManager:
             func_ebitda = pc.ebitda_proccess(pricing_df)
             df_ebitda = pc.pricing(func_ebitda)
             df_final = pc.drop_inactives(df_ebitda)
-            return sellers_list, df_final[['sku (*)', 'special_price']]
+            columns = ['sku', 'brand', 'category', 'name', 'price', 'seller_name']
+            sellers_df = pd.DataFrame(sellers_list, columns=columns)
+            return sellers_df, df_final[['sku (*)', 'special_price']]
         except Exception as e:
-            pricing_logger.exception(e)
+            pricing_logger.exception(str(e))
             raise
 
     @benchmark_with(pricing_logger)
@@ -183,5 +181,5 @@ class PricingManager:
                 )
 
         except Exception as e:
-            pricing_logger.exception(e)
+            pricing_logger.exception(str(e))
             raise

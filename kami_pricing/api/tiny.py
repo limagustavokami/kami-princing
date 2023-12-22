@@ -49,7 +49,7 @@ class TinyAPI:
                 f'The credentials file at {self.credentials_path} contains invalid JSON.'
             )
         except Exception as e:
-            raise TinyAPIError(f'Failed to get credentials: {e}')
+            raise TinyAPIError(f'Failed to get credentials: {str(e)}')
 
     @benchmark_with(tiny_api_logger)
     @logging_with(tiny_api_logger)
@@ -99,13 +99,13 @@ class TinyAPI:
                 self.result = response.json()
 
         except httpx.HTTPStatusError as e:
-            raise TinyAPIError(f'HTTP error occurred: {e}')
+            raise TinyAPIError(f'HTTP error occurred: {str(e)}')
         except httpx.RequestError as e:
-            raise TinyAPIError(f'Failed to connect: {e}')
+            raise TinyAPIError(f'Failed to connect: {str(e)}')
         except ValueError as e:
             raise TinyAPIError(str(e))
         except Exception as e:
-            raise TinyAPIError(f'Failed to connect: {e}')
+            raise TinyAPIError(f'Failed to connect: {str(e)}')
 
     @benchmark_with(tiny_api_logger)
     @logging_with(tiny_api_logger)
@@ -124,9 +124,9 @@ class TinyAPI:
                     f"Tiny API Raises: { response['retorno']['erros']}"
                 )
         except HTTPError as e:
-            raise HTTPError(f'HTTP error occurred: {e}')
+            raise HTTPError(f'HTTP error occurred: {str(e)}')
         except RequestException as e:
-            raise RequestException(f'An request error occurred: {e}')
+            raise RequestException(f'An request error occurred: {str(e)}')
 
     @benchmark_with(tiny_api_logger)
     @logging_with(tiny_api_logger)
@@ -143,6 +143,6 @@ class TinyAPI:
                 finally:
                     products_list.append(product_dict)
         except Exception as e:
-            raise TinyAPIError(f'An unknown error occurred: {e}')
+            raise TinyAPIError(f'An unknown error occurred: {str(e)}')
         finally:
             return products_list
