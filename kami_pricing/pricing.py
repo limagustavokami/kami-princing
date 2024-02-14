@@ -10,7 +10,7 @@ from kami_pricing.constant import (
     COLUMNS_ALL_SELLER,
     COLUMNS_DIFERENCE,
     COLUMNS_EXCEPT_HAIRPRO,
-    GOOGLE_API_CREDENTIALS
+    GOOGLE_API_CREDENTIALS,
 )
 
 pricing_logger = logging.getLogger('pricing')
@@ -31,8 +31,6 @@ class Pricing:
         self.limit_rate_ebitda = limit_rate_ebitda
         self.increment_price_new = increment_price_new
 
-    @benchmark_with(pricing_logger)
-    @logging_with(pricing_logger)
     def calc_ebitda(self, df: pd.DataFrame) -> pd.DataFrame:
         try:
             df['COMISSÃO'] = round(
@@ -62,7 +60,7 @@ class Pricing:
                 'Division by zero encountered while calculating percentages.'
             )
         except Exception as e:
-            pricing_logger.error(f'An unexpected error occurred: {e}')
+            pricing_logger.error(f'An unexpected error occurred: {str(e)}')
             return None
 
     @benchmark_with(pricing_logger)
@@ -112,7 +110,7 @@ class Pricing:
                     )
             return df
         except Exception as e:
-            pricing_logger.error(f'An unexpected error occurred: {e}')
+            pricing_logger.error(f'An unexpected error occurred: {str(e)}')
             return None
 
     @benchmark_with(pricing_logger)
@@ -126,12 +124,6 @@ class Pricing:
         df_sellers_df_list['seller_name'] = df_sellers_df_list[
             'seller_name'
         ].astype(str)
-        df_sellers_df_list.drop(
-            df_sellers_df_list[
-                df_sellers_df_list['seller_name'].str.contains('Beleza na Web')
-            ].index,
-            inplace=True,
-        )
         hairpro_df = df_sellers_df_list.loc[
             df_sellers_df_list['seller_name'] == 'HAIRPRO'
         ]
@@ -143,9 +135,10 @@ class Pricing:
         except_hairpro_df = pd.DataFrame(
             except_hairpro_df, columns=COLUMNS_EXCEPT_HAIRPRO
         )
-        except_hairpro_df.drop_duplicates(
-            subset='sku', keep='first', inplace=True
-        )
+
+        sugest_price = except_hairpro_df.groupby('sku')['price'].idxmin()
+        except_hairpro_df = except_hairpro_df.loc[sugest_price]
+
         difference_price_df = pd.DataFrame(
             hairpro_df, columns=COLUMNS_DIFERENCE
         )
@@ -168,9 +161,6 @@ class Pricing:
                     difference_price_df[
                         'difference_price'
                     ] = difference_price_df['difference_price'].round(6)
-                    pricing_logger.info(
-                        difference_price_df['difference_price']
-                    )
                 # quando difference_price_df['competitor_price'] for zero e sua serie for ambigua, sugerir um preco de 10% maior
                 # e arrendondar para 2 casas decimais o preco sugerido
                 if (
@@ -181,7 +171,6 @@ class Pricing:
                     difference_price_df['suggest_price'] = difference_price_df[
                         'price'
                     ].round(6)
-                    pricing_logger.info(difference_price_df['suggest_price'])
 
                 # quando o preço da Hairpro for maior que o preço do concorrente, sugerir o preço de 0,10 centavos a menos
                 # que o preço do concorrente e arrendondar para 2 casas decimais o preco sugerido
@@ -225,16 +214,16 @@ class Pricing:
             credentials_path=GOOGLE_API_CREDENTIALS,
         )
         kg.clear_range(
-            '1u7dCTQzbqgKSSjpSVtsUl7ea2j2YgW4Ko2nB9akE1ws', 'ebitda!A2:B'
+            '1u7dCTQzbqgKSSjpSVtsUl7ea2j2YgW4Ko2nB9akE1ws', 'ebit!A2:B'
         )
 
         df = df[['sku (*)', 'special_price']]
 
         kg.append_dataframe(
-            df, '1u7dCTQzbqgKSSjpSVtsUl7ea2j2YgW4Ko2nB9akE1ws', 'ebitda!A2:B'
+            df, '1u7dCTQzbqgKSSjpSVtsUl7ea2j2YgW4Ko2nB9akE1ws', 'ebit!A2:B'
         )
         df_ebitda = kg.convert_range_to_dataframe(
-            '1u7dCTQzbqgKSSjpSVtsUl7ea2j2YgW4Ko2nB9akE1ws', 'ebitda!A1:E'
+            '1u7dCTQzbqgKSSjpSVtsUl7ea2j2YgW4Ko2nB9akE1ws', 'ebit!A1:E'
         )
 
         df_ebitda = df_ebitda.replace('None', np.nan)
@@ -248,8 +237,6 @@ class Pricing:
 
         return df_ebitda
 
-    @benchmark_with(pricing_logger)
-    @logging_with(pricing_logger)
     def drop_inactives(self, df: pd.DataFrame):
         kg = KamiGsheet(
             api_version='v4',
@@ -270,5 +257,5 @@ class Pricing:
 
             return df
         except Exception as e:
-            pricing_logger.exception(e)
+            pricing_logger.exception(str(e))
             return None

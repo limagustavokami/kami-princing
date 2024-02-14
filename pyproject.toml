@@ -1,10 +1,10 @@
 [tool.poetry]
 name = "kami-pricing"
-version = "0.2.0"
+version = "0.3.3"
 description = "Pricing tool to acquire the best positioning without losing profit margin in different marketplaces, using the ANYMARKET API or PLUGG.TO API"
 authors = ["Maicon de Menezes <maicondmenezes@gmail.com>", "Gustavo Lima <gustavasd@gmail.com>", "Marcos Madeira <mmadeirasilva5@gmail.com>"]
 readme = "README.md"
-packages = [{include = "kami_princing"}]
+packages = [{include = "kami_pricing"}]
 
 [tool.poetry.scripts]
 kami_pricing = "service:main"
@@ -13,7 +13,7 @@ kami_pricing = "service:main"
 python = ">=3.10,<3.13"
 python-dotenv = "^1.0.0"
 kami-logging = "^0.2.1"
-kami-messenger = "^0.2.0"
+kami-messenger = "^0.3.0"
 kami-gdrive = "^0.1.3"
 openpyxl = "^3.1.2"
 xlsxwriter = "^3.1.2"

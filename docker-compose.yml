@@ -4,11 +4,13 @@ services:
     build: 
       context: ./
     user: root
-    image: kami-pricing:0.2.0
+    image: kami-pricing:0.3.3
     container_name : "kami-pricing"
     hostname: "kami-pricing"
     volumes:
       - ./logs:/app/logs
       - ./credentials:/app/credentials
       - ./settings:/app/settings
+      - ./messages:/app/messages
+      - ./reports:/app/reports
     restart: always

@@ -51,8 +51,8 @@ class PluggToAPI:
                 f'The credentials file at {self.credentials_path} contains invalid JSON.'
             )
         except Exception as e:
-            raise PluggToAPIError(f'Failed to get credentials: {e}')
-    
+            raise PluggToAPIError(f'Failed to get credentials: {str(e)}')
+
     @benchmark_with(plugg_to_api_logger)
     @logging_with(plugg_to_api_logger)
     def _set_access_token(self):
@@ -75,19 +75,19 @@ class PluggToAPI:
                 response = client.post(
                     f'{self.base_url}/oauth/token',
                     data=payload,
-                    headers=headers
+                    headers=headers,
                 )
                 response.raise_for_status()
                 self.access_token = response.json()['access_token']
         except Exception as e:
-            raise Exception(f'Failed to set access token: {e}')
+            raise Exception(f'Failed to set access token: {str(e)}')
 
-    def connect(
+    def _connect(
         self,
         method: str = 'GET',
         endpoint: str = '',
         payload: List = [],
-        headers: Dict = {},              
+        headers: Dict = {},
     ):
         try:
             if not self.access_token:
@@ -98,7 +98,7 @@ class PluggToAPI:
                 headers['accept'] = 'application/json'
             if 'Authorization' not in headers:
                 headers['Authorization'] = f'Bearer {self.access_token}'
-                
+
             method = method.upper()
 
             with httpx.Client() as client:
@@ -125,21 +125,23 @@ class PluggToAPI:
 
                 response.raise_for_status()
                 self.result = response.json()
-                
+
         except httpx.HTTPStatusError as e:
-            raise PluggToAPIError(f'HTTP error occurred: {e}')
+            raise PluggToAPIError(f'HTTP error occurred: {str(e)}')
         except httpx.RequestError as e:
-            raise PluggToAPIError(f'Failed to connect: {e}')
+            raise PluggToAPIError(f'Failed to connect: {str(e)}')
         except ValueError as e:
             raise PluggToAPIError(str(e))
         except Exception as e:
-            raise PluggToAPIError(f'Failed to connect: {e}')
+            raise PluggToAPIError(f'Failed to connect: {str(e)}')
 
     def update_price(self, sku: str, new_price: float):
         try:
-            payload = [{'special_price': new_price},]
-            payload_str = json.dumps(payload)                     
-            self.connect(
+            payload = [
+                {'special_price': new_price},
+            ]
+            payload_str = json.dumps(payload)
+            self._connect(
                 method='PUT',
                 endpoint=f'/skus/{sku}',
                 payload=payload_str,
@@ -148,11 +150,11 @@ class PluggToAPI:
                 f'Product: {sku} updated price to {new_price}'
             )
         except PluggToAPIError as e:
-            raise PluggToAPIError(f'Failed to update price: {e}')
-        
+            raise PluggToAPIError(f'Failed to update price: {str(e)}')
+
     def update_prices(self, pricing_df: pd.DataFrame):
-        try:            
-            for index, row in pricing_df.iterrows():                
+        try:
+            for index, row in pricing_df.iterrows():
                 self.update_price(
                     sku=str(row['sku (*)']), new_price=row['special_price']
                 )

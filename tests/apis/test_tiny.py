@@ -53,7 +53,8 @@ class TestTinyAPI(unittest.TestCase):
             self.tiny_api._set_credentials()
         self.assertIn(
             'Failed to get credentials: Generic error', str(context.exception)
-        )    
+        )
+
 
 if __name__ == '__main__':
     unittest.main()

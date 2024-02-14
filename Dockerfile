@@ -5,6 +5,7 @@ WORKDIR /app
 COPY pyproject.toml service.py /app/
 COPY credentials /app/credentials
 COPY settings /app/settings
+COPY messages /app/messages
 COPY kami_pricing /app/kami_pricing/
 RUN pip install poetry && \
     poetry install --only main

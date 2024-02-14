@@ -1,8 +1,8 @@
 {
   "company": "HAIRPRO",
   "marketplace": "BELEZA_NA_WEB",
-  "product_urls_sheet_name":"pricing_teste",
+  "product_urls_sheet_name":"pricing",
   "skus_sellers_sheet_name":"skushairpro",
-  "integrator": "PLUGG_TO",
-  "every_seconds": 5
+  "integrator": "ANYMARKET",
+  "every_seconds": 600
 }
